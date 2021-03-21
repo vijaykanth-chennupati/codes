@@ -1,0 +1,18 @@
+- name: httpd play
+  hosts: target11.vj.com
+  tasks:
+      - name: install httpd
+        package:
+            name: httpd
+            state: present
+      - name: copy html code to the root dir
+        template:
+               src: /root/ansible/page.j2
+               dest: /var/www/html/page.html
+        notify: server restart
+  handlers:
+      - name: server restart
+        service:
+             name: httpd
+             state: restarted
+
