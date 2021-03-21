@@ -1,0 +1,79 @@
+- name: hadoop setup
+  hosts: group1
+  tasks:
+    - name: copy jdk to targets
+      copy:
+        src: /root/jdk-8u171-linux-x64.rpm
+        dest: /root
+
+    - name: copy hadoop to target
+      copy:
+        src: /root/hadoop-1.2.1-1.x86_64.rpm
+        dest: /root
+    - name: install jdk
+      dnf:
+        name: /root/jdk-8u171-linux-x64.rpm
+        state: present
+        disable_gpg_check: yes
+    - name: install hadoop
+      command:
+        warn: no
+        cmd: rpm -i /root/hadoop-1.2.1-1.x86_64.rpm --force
+- name: namenode setup
+  hosts: target11.vj.com
+  tasks:
+     - name: directory for namenode
+       file:
+         path: /nnodestore
+         state: directory
+     - name: config hdfs
+       blockinfile:
+               path: /etc/hadoop/hdfs-site.xml
+               insertafter: <configuration>
+               block: |
+                       <property>
+                       <name>dfs.name.dir</name>
+                       <value>/nnodestore</value>
+                       </property> 
+     - name: config core
+       blockinfile:
+               path: /etc/hadoop/core-site.xml
+               insertafter: <configuration>
+               block: |
+                       <property>
+                       <name>fs.default.name</name>
+                       <value>hdfs://0.0.0.0:9090</value>
+                       </property>
+     - name: namenode format
+       shell: echo Y | hadoop namenode -format
+     - name: start namenode
+       command:
+         cmd: hadoop-daemon.sh start namenode 
+- name: datanode setup
+  hosts: target12.vj.com
+  tasks:
+     - name: directory for datanode
+       file:
+         path: /dnodestore
+         state: directory
+     - name: config hdfs
+       blockinfile:
+               path: /etc/hadoop/hdfs-site.xml
+               insertafter: <configuration>
+               block: |
+                       <property>
+                       <name>dfs.datanode.dir</name>
+                       <value>/dnodestore</value>
+                       </property> 
+     - name: config core
+       blockinfile:
+               path: /etc/hadoop/core-site.xml
+               insertafter: <configuration>
+               block: |
+                       <property>
+                       <name>fs.default.name</name>
+                       <value>hdfs://{{hostvars[groups['group1'][0]]['ansible_facts']['all_ipv4_addresses'][0]}}:9090</value>
+                       </property>
+     - name: start datanode
+       command:
+         cmd: hadoop-daemon.sh start datanode
